@@ -7,6 +7,7 @@
 static Window *window;
 static TextLayer *tl_current_time;
 static TextLayer *tl_current_date;
+static TextLayer *tl_week_indicator;
 static TextLayer *tl_next_event_subject;
 static TextLayer *tl_next_event_time;
 static char subject[SUBJECT_LENGTH];
@@ -46,10 +47,14 @@ static void handle_window_load(Window *window) {
 	text_layer_set_font(tl_current_date, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_SIGNIKA_21)));
 	layer_add_child(window_layer, text_layer_get_layer(tl_current_date));
 
-	tl_next_event_time = text_layer_create_default((GRect) { .origin = { 0, 89 }, .size = { bounds.size.w, 18 } });
+	tl_week_indicator = text_layer_create_default((GRect) { .origin = { 0, 90 }, .size = { bounds.size.w, 18 } });
+	text_layer_set_text(tl_week_indicator, week_indicator);
+	layer_add_child(window_layer, text_layer_get_layer(tl_week_indicator));
+
+	tl_next_event_time = text_layer_create_default((GRect) { .origin = { 0, 108 }, .size = { bounds.size.w, 18 } });
 	layer_add_child(window_layer, text_layer_get_layer(tl_next_event_time));
 
-	tl_next_event_subject = text_layer_create_default((GRect) { .origin = { 0, 108 }, .size = { bounds.size.w, bounds.size.h - 105 } });
+	tl_next_event_subject = text_layer_create_default((GRect) { .origin = { 0, 127 }, .size = { bounds.size.w, bounds.size.h - 125 } });
 	text_layer_set_overflow_mode(tl_next_event_subject, GTextOverflowModeWordWrap);
 	layer_add_child(window_layer, text_layer_get_layer(tl_next_event_subject));
 #ifdef PBL_ROUND
@@ -63,6 +68,7 @@ static void handle_window_load(Window *window) {
 static void handle_window_unload(Window *window) {
 	text_layer_destroy(tl_current_time);
 	text_layer_destroy(tl_current_date);
+	text_layer_destroy(tl_week_indicator);
 	text_layer_destroy(tl_next_event_subject);
 	text_layer_destroy(tl_next_event_time);
 }
@@ -95,6 +101,7 @@ static void update_next_event_time(struct tm *tick_time) {
 static void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	text_layer_set_text(tl_current_time, format_time(tick_time));
 	text_layer_set_text(tl_current_date, format_date(tick_time));
+	text_layer_set_text(tl_week_indicator, week_indicator);
 	if (tick_time->tm_wday != schedule_weekday || tick_time->tm_min == 0)
 		data_request_from_phone();
 	update_next_event_time(tick_time);

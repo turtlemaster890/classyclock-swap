@@ -19,6 +19,7 @@
 #define KEY_COLOR_DATE      INT_MAX-12
 #define KEY_COLOR_TIMER     INT_MAX-13
 #define KEY_COLOR_SUBJECT   INT_MAX-14
+#define KEY_WEEK_LABEL      INT_MAX-15
 
 typedef struct {
 	uint16_t minutes;
@@ -30,6 +31,7 @@ typedef struct {
 static ClassEvent schedule[SCHED_LENGTH];
 static uint8_t schedule_weekday;
 static uint8_t vibrate_minutes = 1;
+static char week_indicator[32] = "Week ?";
 #ifdef PBL_COLOR
 static uint32_t color_bg      = 0xffaaaa;
 static uint32_t color_clock   = 0x555500;
@@ -98,6 +100,7 @@ static void data_set_from_dict(DictionaryIterator* iter, struct tm *cur_time) {
 		j++;
 	}
 	Tuple *vib         ; if ((vib         = dict_find(iter, KEY_VIBRATE_MINUTES )))   vibrate_minutes = (uint8_t)vib->value->int32;
+	Tuple *week_label  ; if ((week_label  = dict_find(iter, KEY_WEEK_LABEL       )))   classy_strlcpy(week_indicator, week_label->value->cstring, sizeof(week_indicator));
 #ifdef PBL_COLOR
 	Tuple *tup_bg      ; if ((tup_bg      = dict_find(iter, KEY_COLOR_BG        )))   color_bg        = (uint32_t)tup_bg->value->int32;
 	Tuple *tup_clock   ; if ((tup_clock   = dict_find(iter, KEY_COLOR_CLOCK     )))   color_clock     = (uint32_t)tup_clock->value->int32;

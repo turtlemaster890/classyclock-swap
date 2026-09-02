@@ -4,18 +4,78 @@ var SETTINGS_URL = SERVER_HOST + '/static/settings.html'
 var TIMELINE_URL = SERVER_HOST + '/timeline'
 
 var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-var defaultSchedules = days.map(function (dn) {
-	return { 'day': dn, 'schedule': [ { 'start': '23:58', 'end': '23:59', 'subj': 'Edit schedule on phone' } ] }
+var defaultSchedules = ['A', 'B', 'C', 'D'].map(function (letter) {
+	return { 'day': letter, 'schedule': [ { 'start': '23:58', 'end': '23:59', 'subj': 'Edit schedule on phone' } ] }
 })
 
 function getSchedules () {
 	var ls = localStorage.getItem('schedules')
-	if (ls !== null) return JSON.parse(ls).schedules || defaultSchedules
+	if (ls !== null) {
+		var parsed = JSON.parse(ls)
+		if (Array.isArray(parsed)) return parsed
+		if (parsed && Array.isArray(parsed.schedules)) return parsed.schedules
+	}
 	return defaultSchedules
 }
 
+function hasLetterSchedules () {
+	return getSchedules().some(function (entry) {
+		return ['A', 'B', 'C', 'D'].indexOf(String(entry.day)) !== -1
+	})
+}
+
+function getAutoWeekParity (d) {
+	var anchor = new Date(2024, 8, 2) // Monday of the first known school week in this schedule system.
+	var current = new Date(d)
+	current.setHours(0, 0, 0, 0)
+	anchor.setHours(0, 0, 0, 0)
+	var diffDays = Math.floor((current.getTime() - anchor.getTime()) / 86400000)
+	return Math.floor(diffDays / 7) % 2
+}
+
+function getWeekPattern () {
+	var normalPattern = ['A', 'B', 'C', 'D']
+	var altPattern = ['A', 'B', 'D', 'C']
+	var autoParity = getAutoWeekParity(new Date())
+	var compareTo = 0
+	if (storageGetBool('weekParityToggle')) compareTo = 1
+	return autoParity === compareTo ? normalPattern : altPattern
+}
+
+function getCurrentWeekLabel () {
+	var pattern = getWeekPattern()
+	var weekNumber = (pattern.join('') === 'ABCD') ? 1 : 2
+	return 'Week ' + weekNumber + ' (' + pattern.join('') + ')'
+}
+
+function getScheduleForLabel (label) {
+	var matching = getSchedules().filter(function (s) { return s.day == label })[0]
+	return (matching || { schedule: [] }).schedule
+}
+
+function getPeriodScheduleForToday () {
+	var order = getWeekPattern()
+	var schedule = []
+	order.forEach(function (label) {
+		var labelSchedule = getScheduleForLabel(label)
+		if (Array.isArray(labelSchedule)) {
+			labelSchedule.forEach(function (entry) {
+				schedule.push(entry)
+			})
+		}
+	})
+	return schedule
+}
+
 function getScheduleForToday () {
-	// Why the hell is "sunday is the first day" even a thing
+	if (hasLetterSchedules()) {
+		var dayNumber = new Date().getDay() - 1
+		if (dayNumber === -1) dayNumber = 6
+		if (dayNumber > 4) return []
+		return getPeriodScheduleForToday()
+	}
+
+	// Legacy fallback: different schedule each named weekday.
 	var dayNumber = new Date().getDay() - 1
 	var today = days[dayNumber == -1 ? days.length - 1 : dayNumber]
 	return (getSchedules().filter(function (s) { return s.day == today })[0] || { schedule: [] }).schedule
@@ -50,6 +110,7 @@ function addSettings (message) {
 	message[String(INT_MAX - 12)] = parseInt((localStorage.getItem('colorDate')     || '#555500').slice(1), 16)
 	message[String(INT_MAX - 13)] = parseInt((localStorage.getItem('colorTimer')    || '#555500').slice(1), 16)
 	message[String(INT_MAX - 14)] = parseInt((localStorage.getItem('colorSubject')  || '#555500').slice(1), 16)
+	message[String(INT_MAX - 15)] = getCurrentWeekLabel()
 	console.log('Message: ' + JSON.stringify(message))
 	return message
 }
@@ -163,6 +224,7 @@ Pebble.addEventListener('appmessage', function (e) {
 Pebble.addEventListener('showConfiguration', function (e) {
 	Pebble.openURL(SETTINGS_URL + '#' + encodeURIComponent(JSON.stringify({
 		schedules:         getSchedules(),
+		weekParityToggle:  storageGetBool('weekParityToggle'),
 		vibrateMinutes:    localStorage.getItem('vibrateMinutes'),
 		ruzEmail:          localStorage.getItem('ruzEmail'),
 		ruzEnabled:        storageGetBool('ruzEnabled'),
@@ -179,6 +241,7 @@ Pebble.addEventListener('webviewclosed', function (e) {
 	var rsp = JSON.parse(decodeURIComponent(e.response))
 	if (typeof rsp === 'object') {
 		setSchedules(rsp.schedules)
+		localStorage.setItem('weekParityToggle', JSON.stringify(rsp.weekParityToggle === true))
 		localStorage.setItem('vibrateMinutes', rsp.vibrateMinutes)
 		localStorage.setItem('ruzEmail', rsp.ruzEmail)
 		localStorage.setItem('ruzEnabled', JSON.stringify(rsp.ruzEnabled))
