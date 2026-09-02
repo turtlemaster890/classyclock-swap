@@ -1,6 +1,9 @@
-var SERVER_HOST = 'https://unrelenting.technology/classyclock'
-//SERVER_HOST = 'http://192.168.1.3:4343'
-var SETTINGS_URL = SERVER_HOST + '/static/settings.html'
+// GitHub Pages works for the static settings UI. Replace the placeholder below with
+// your real repo URL before publishing, e.g.:
+// https://your-user.github.io/classyclock/settings-app/settings.html
+// For local development, you can still point at http://localhost:8000/settings-app/settings.html
+var SERVER_HOST = 'https://turtlemaster890.github.io/classyclock-swap'
+var SETTINGS_URL = SERVER_HOST + '/settings-app/settings.html'
 var TIMELINE_URL = SERVER_HOST + '/timeline'
 
 var days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -111,6 +114,7 @@ function addSettings (message) {
 	message[String(INT_MAX - 13)] = parseInt((localStorage.getItem('colorTimer')    || '#555500').slice(1), 16)
 	message[String(INT_MAX - 14)] = parseInt((localStorage.getItem('colorSubject')  || '#555500').slice(1), 16)
 	message[String(INT_MAX - 15)] = getCurrentWeekLabel()
+	message[String(INT_MAX - 16)] = storageGetBool('weekParityToggle') ? 1 : 0
 	console.log('Message: ' + JSON.stringify(message))
 	return message
 }

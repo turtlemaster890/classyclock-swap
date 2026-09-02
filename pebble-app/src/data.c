@@ -20,6 +20,7 @@
 #define KEY_COLOR_TIMER     INT_MAX-13
 #define KEY_COLOR_SUBJECT   INT_MAX-14
 #define KEY_WEEK_LABEL      INT_MAX-15
+#define KEY_WEEK_PARITY     INT_MAX-16
 
 typedef struct {
 	uint16_t minutes;
@@ -31,6 +32,7 @@ typedef struct {
 static ClassEvent schedule[SCHED_LENGTH];
 static uint8_t schedule_weekday;
 static uint8_t vibrate_minutes = 1;
+static bool week_parity_toggle = false;
 static char week_indicator[32] = "Week ?";
 #ifdef PBL_COLOR
 static uint32_t color_bg      = 0xffaaaa;
@@ -54,6 +56,7 @@ static void set_schedule_entry(uint8_t j, uint16_t minutes, char *subject) {
 static void data_persist() {
 	persist_write_int(KEY_WEEKDAY,         schedule_weekday);
 	persist_write_int(KEY_VIBRATE_MINUTES, vibrate_minutes);
+	persist_write_int(KEY_WEEK_PARITY,     week_parity_toggle ? 1 : 0);
 	// Signed/unsigned cast preserves the value! So it's fine.
 #ifdef PBL_COLOR
 	persist_write_int(KEY_COLOR_BG,        color_bg);
@@ -69,6 +72,7 @@ static void data_persist() {
 static void data_read_persisted() {
 	if (persist_exists(KEY_WEEKDAY))          schedule_weekday = persist_read_int(KEY_WEEKDAY);
 	if (persist_exists(KEY_VIBRATE_MINUTES))  vibrate_minutes  = persist_read_int(KEY_VIBRATE_MINUTES);
+	if (persist_exists(KEY_WEEK_PARITY))      week_parity_toggle = persist_read_int(KEY_WEEK_PARITY) != 0;
 #ifdef PBL_COLOR
 	if (persist_exists(KEY_COLOR_BG     ))    color_bg         = persist_read_int(KEY_COLOR_BG);
 	if (persist_exists(KEY_COLOR_CLOCK  ))    color_clock      = persist_read_int(KEY_COLOR_CLOCK);
@@ -100,6 +104,7 @@ static void data_set_from_dict(DictionaryIterator* iter, struct tm *cur_time) {
 		j++;
 	}
 	Tuple *vib         ; if ((vib         = dict_find(iter, KEY_VIBRATE_MINUTES )))   vibrate_minutes = (uint8_t)vib->value->int32;
+	Tuple *week_parity ; if ((week_parity = dict_find(iter, KEY_WEEK_PARITY      )))   week_parity_toggle = week_parity->value->int32 != 0;
 	Tuple *week_label  ; if ((week_label  = dict_find(iter, KEY_WEEK_LABEL       )))   classy_strlcpy(week_indicator, week_label->value->cstring, sizeof(week_indicator));
 #ifdef PBL_COLOR
 	Tuple *tup_bg      ; if ((tup_bg      = dict_find(iter, KEY_COLOR_BG        )))   color_bg        = (uint32_t)tup_bg->value->int32;
