@@ -56,8 +56,65 @@ function getScheduleForLabel (label) {
 	return (matching || { schedule: [] }).schedule
 }
 
+function timeToMinutes (t) {
+	var parts = String(t || '00:00').split(':')
+	var hours = parseInt(parts[0], 10) || 0
+	var minutes = parseInt(parts[1], 10) || 0
+	return hours * 60 + minutes
+}
+
+function minutesToTime (minutes) {
+	var total = Math.max(0, Math.floor(minutes))
+	var hours = Math.floor(total / 60)
+	var mins = total % 60
+	return String('00' + hours).slice(-2) + ':' + String('00' + mins).slice(-2)
+}
+
+function getPeriodTimingConfig () {
+	var defaults = {
+		A: '08:00',
+		B: '09:05',
+		C: '10:30',
+		D: '11:35'
+	}
+	var periodLength = parseInt(localStorage.getItem('periodLengthMinutes') || 60, 10) || 60
+	var gapMinutes = parseInt(localStorage.getItem('periodGapMinutes') || 5, 10) || 5
+	var periods = {}
+	['A', 'B', 'C', 'D'].forEach(function (label) {
+		var key = 'periodStartTime_' + label
+		var value = localStorage.getItem(key)
+		if (!value) value = localStorage.getItem('periodStartTime') || defaults[label]
+		periods[label] = value || defaults[label]
+	})
+	return {
+		periods: periods,
+		length: periodLength,
+		gap: gapMinutes
+	}
+}
+
+function buildGeneratedPeriodSchedule (order) {
+	var cfg = getPeriodTimingConfig()
+	var schedule = []
+	order.forEach(function (label) {
+		var labelSchedule = getScheduleForLabel(label)
+		if (!Array.isArray(labelSchedule)) return
+		var startMinutes = timeToMinutes(cfg.periods[label] || '08:00')
+		labelSchedule.forEach(function (entry, index) {
+			if (!entry) return
+			var offsetMinutes = index * (cfg.length + cfg.gap)
+			var start = minutesToTime(startMinutes + offsetMinutes)
+			var end = minutesToTime(startMinutes + offsetMinutes + cfg.length)
+			schedule.push({ start: start, end: end, subj: entry.subj || label })
+		})
+	})
+	return schedule
+}
+
 function getPeriodScheduleForToday () {
 	var order = getWeekPattern()
+	var generated = buildGeneratedPeriodSchedule(order)
+	if (generated.length > 0) return generated
 	var schedule = []
 	order.forEach(function (label) {
 		var labelSchedule = getScheduleForLabel(label)
@@ -229,6 +286,12 @@ Pebble.addEventListener('showConfiguration', function (e) {
 	Pebble.openURL(SETTINGS_URL + '#' + encodeURIComponent(JSON.stringify({
 		schedules:         getSchedules(),
 		weekParityToggle:  storageGetBool('weekParityToggle'),
+		periodStartTimeA:  localStorage.getItem('periodStartTime_A') || localStorage.getItem('periodStartTime') || '08:00',
+		periodStartTimeB:  localStorage.getItem('periodStartTime_B') || localStorage.getItem('periodStartTime') || '09:05',
+		periodStartTimeC:  localStorage.getItem('periodStartTime_C') || localStorage.getItem('periodStartTime') || '10:30',
+		periodStartTimeD:  localStorage.getItem('periodStartTime_D') || localStorage.getItem('periodStartTime') || '11:35',
+		periodLengthMinutes: parseInt(localStorage.getItem('periodLengthMinutes') || 60, 10),
+		periodGapMinutes:  parseInt(localStorage.getItem('periodGapMinutes') || 5, 10),
 		vibrateMinutes:    localStorage.getItem('vibrateMinutes'),
 		ruzEmail:          localStorage.getItem('ruzEmail'),
 		ruzEnabled:        storageGetBool('ruzEnabled'),
@@ -246,6 +309,12 @@ Pebble.addEventListener('webviewclosed', function (e) {
 	if (typeof rsp === 'object') {
 		setSchedules(rsp.schedules)
 		localStorage.setItem('weekParityToggle', JSON.stringify(rsp.weekParityToggle === true))
+		if (rsp.periodStartTimeA) localStorage.setItem('periodStartTime_A', rsp.periodStartTimeA)
+		if (rsp.periodStartTimeB) localStorage.setItem('periodStartTime_B', rsp.periodStartTimeB)
+		if (rsp.periodStartTimeC) localStorage.setItem('periodStartTime_C', rsp.periodStartTimeC)
+		if (rsp.periodStartTimeD) localStorage.setItem('periodStartTime_D', rsp.periodStartTimeD)
+		if (rsp.periodLengthMinutes) localStorage.setItem('periodLengthMinutes', rsp.periodLengthMinutes)
+		if (rsp.periodGapMinutes) localStorage.setItem('periodGapMinutes', rsp.periodGapMinutes)
 		localStorage.setItem('vibrateMinutes', rsp.vibrateMinutes)
 		localStorage.setItem('ruzEmail', rsp.ruzEmail)
 		localStorage.setItem('ruzEnabled', JSON.stringify(rsp.ruzEnabled))
