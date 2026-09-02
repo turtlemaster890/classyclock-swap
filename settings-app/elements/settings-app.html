@@ -170,6 +170,10 @@
 	var return_to = getQueryParam('return_to', 'pebblejs://close#')
 	var dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
+	function storageGetBool (key) {
+		try { return JSON.parse(localStorage.getItem(key)) == true } catch (e) { return false }
+	}
+
 	Polymer({
 		is: 'settings-app',
 		properties: {
