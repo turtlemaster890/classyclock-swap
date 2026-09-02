@@ -97,16 +97,18 @@ function getPeriodTimingConfig () {
 function buildGeneratedPeriodSchedule (order) {
 	var cfg = getPeriodTimingConfig()
 	var schedule = []
-	order.forEach(function (label) {
-		var labelSchedule = getScheduleForLabel(label)
+	var slotLetters = ['A', 'B', 'C', 'D']
+	slotLetters.forEach(function (slotLetter, slotIndex) {
+		var labelForThisSlot = order[slotIndex] || slotLetter
+		var labelSchedule = getScheduleForLabel(labelForThisSlot)
 		if (!Array.isArray(labelSchedule)) return
-		var startMinutes = timeToMinutes(cfg.periods[label] || '08:00')
+		var startMinutes = timeToMinutes(cfg.periods[slotLetter] || '08:00')
 		labelSchedule.forEach(function (entry, index) {
 			if (!entry) return
 			var offsetMinutes = index * (cfg.length + cfg.gap)
 			var start = minutesToTime(startMinutes + offsetMinutes)
 			var end = minutesToTime(startMinutes + offsetMinutes + cfg.length)
-			schedule.push({ start: start, end: end, subj: entry.subj || label })
+			schedule.push({ start: start, end: end, subj: entry.subj || labelForThisSlot })
 		})
 	})
 	return schedule
