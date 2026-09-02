@@ -80,7 +80,8 @@ function getPeriodTimingConfig () {
 	var periodLength = parseInt(localStorage.getItem('periodLengthMinutes') || 60, 10) || 60
 	var gapMinutes = parseInt(localStorage.getItem('periodGapMinutes') || 5, 10) || 5
 	var periods = {}
-	['A', 'B', 'C', 'D'].forEach(function (label) {
+	var periodNames = ['A', 'B', 'C', 'D']
+	periodNames.forEach(function (label) {
 		var key = 'periodStartTime_' + label
 		var value = localStorage.getItem(key)
 		if (!value) value = localStorage.getItem('periodStartTime') || defaults[label]
